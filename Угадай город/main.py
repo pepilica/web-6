@@ -1,19 +1,19 @@
 import requests
 import os
 import pygame
-from random import choices
+from random import choice
 
 
 pygame.init()
 cities = ['Альметьевск', 'Москва', 'Нью-Йорк', "Токио", "Филадельфия", "Санкт-Петербург",
-          "Казань", 'Рим', 'Набережные Челны', 'Калькутта', 'Макао']
+          "Казань", 'Рим', 'Набережные Челны', 'Калькутта', 'Макао', 'Тамбов', "Череповец"]
 
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 map_api_server = "http://static-maps.yandex.ru/1.x/"
 
 
 def get_picture():
-    city = choices(cities)
+    city = choice(cities)
     geocoder_params = {
         "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
         "geocode": city,
@@ -28,12 +28,13 @@ def get_picture():
     toponym_coodrinates = toponym["Point"]["pos"]
     toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
 
-    spn = choices(list(map(lambda a: a * 0.001, range(1, 201))))[0]
+    spn = choice(list(map(lambda a: a * 0.001, range(1, 201))))
     map_params = {
-        "l": "sat",
+        "l": 'sat',
         'spn': str(spn) + ',' + str(spn),
         'll': str(toponym_longitude) + ',' + str(toponym_lattitude),
-        'size': '600,450'
+        'size': '600,450',
+        'z': '14'
     }
 
     response = requests.get(map_api_server, params=map_params)
@@ -44,7 +45,7 @@ def get_picture():
 
 
 screen = pygame.display.set_mode((600, 450))
-city = get_picture()[0]
+city = get_picture()
 map_file = "map.png"
 image = pygame.image.load(map_file)
 screen.blit(image, (0, 0))
@@ -64,7 +65,7 @@ while running:
                     screen.blit(text, (600 // 2 - text.get_width() // 2, 450 // 2 - text.get_height() // 2))
                     is_solved = True
                 else:
-                    city = get_picture()[0]
+                    city = get_picture()
                     image = pygame.image.load(map_file)
                     screen.blit(image, (0, 0))
                     os.remove("map.png")

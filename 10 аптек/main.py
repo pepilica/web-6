@@ -34,50 +34,65 @@ if args.address:
 
     json_response = response_toponym.json()
     toponym = json_response["response"]["GeoObjectCollection"][
-        "featureMember"][0]["GeoObject"]
-    toponym_coodrinates = toponym["Point"]["pos"]
-    toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
+        "featureMember"]
+    if toponym:
+        toponym_coodrinates = toponym[0]["GeoObject"]["Point"]["pos"]
+        toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
 
-    search_params = {
-        "apikey": "dda3ddba-c9ea-4ead-9010-f43fbc15c6e3",
-        "text": "аптека",
-        "lang": "ru_RU",
-        "ll": toponym_coodrinates.replace(' ', ','),
-        "type": "biz"
-    }
+        search_params = {
+            "apikey": "dda3ddba-c9ea-4ead-9010-f43fbc15c6e3",
+            "text": "аптека",
+            "lang": "ru_RU",
+            "ll": toponym_coodrinates.replace(' ', ','),
+            "type": "biz"
+        }
 
-    response_pharmacy = requests.get(search_api_server, params=search_params).json()
-    points = []
-    for number in range(10):
-        organization = response_pharmacy["features"][number]
-        org_name = organization["properties"]["CompanyMetaData"]["name"]
-        org_address = organization["properties"]["CompanyMetaData"]["address"]
-        org_hours = organization["properties"]["CompanyMetaData"]['Hours']
-        point = organization["geometry"]["coordinates"]
-        org_point = "{0},{1}".format(point[0], point[1])
-        if 'Availabilities' in org_hours.keys():
-            if 'TwentyFourHours' in org_hours['Availabilities'][0].keys():
-                points.append(org_point + ',pmgns')
+        response_pharmacy = requests.get(search_api_server, params=search_params).json()
+        points = []
+        for number in range(min(10, len(response_pharmacy['features']))):
+            if response_pharmacy['features']:
+                organization = response_pharmacy["features"][number]
+                org_name = organization["properties"]["CompanyMetaData"]["name"]
+                org_address = organization["properties"]["CompanyMetaData"]["address"]
+                org_hours = organization["properties"]["CompanyMetaData"]
+                point = organization["geometry"]["coordinates"]
+                org_point = "{0},{1}".format(point[0], point[1])
+                if 'Hours' in org_hours:
+                    if 'Availabilities' in org_hours['Hours'].keys():
+                        if 'TwentyFourHours' in org_hours['Hours']['Availabilities'][0].keys():
+                            points.append(org_point + ',pmgns')
+                        else:
+                            points.append(org_point + ',pmbls')
+                    else:
+                        points.append(org_point + ',pmgrs')
+                else:
+                    points.append(org_point + ',pmgrs')
+                print('Name: ' + org_name)
+                print('Address: ' + org_address)
+                if 'Hours' in org_hours:
+                    print('Working hours: ' + org_hours['Hours']['text'])
+                else:
+                    print('Working hours: ?')
+                print(
+                    'Distance: ' + '%.1f' % (lonlat_distance([point[0], point[1]]
+                                                             , map(float, toponym_coodrinates.split(' '))))
+                    + 'метров')
+                print('---------------')
             else:
-                points.append(org_point + ',pmbls')
-        else:
-            points.append(org_point + ',pmgrs')
-        print(number)
-        print('Name: ' + org_name)
-        print('Address: ' + org_address)
-        print('Working hours: ' + org_hours['text'])
-        print(
-            'Distance: ' + '%.1f' % (lonlat_distance([point[0], point[1]], map(float, toponym_coodrinates.split(' '))))
-            + 'метров')
-        print('---------------')
-    map_params = {
-        "l": "map",
-        "pt": '~'.join([",".join([toponym_longitude, toponym_lattitude])] + points)
-    }
-    map_api_server = "http://static-maps.yandex.ru/1.x/"
-    response = requests.get(map_api_server, params=map_params)
+                if not points:
+                    print('Nothing found')
+                print(response_pharmacy)
+                break
+        map_params = {
+            "l": "map",
+            "pt": '~'.join([",".join([toponym_longitude, toponym_lattitude])] + points)
+        }
+        map_api_server = "http://static-maps.yandex.ru/1.x/"
+        response = requests.get(map_api_server, params=map_params)
 
-    Image.open(BytesIO(
-        response.content)).show()
+        Image.open(BytesIO(
+            response.content)).show()
+    else:
+        print('Wrong query')
 else:
     print('Wrong query')

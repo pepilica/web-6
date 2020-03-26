@@ -20,4 +20,3 @@ def lonlat_distance(a, b):
 
     return distance
 
-
